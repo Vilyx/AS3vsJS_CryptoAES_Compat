@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009"
+					   xmlns:s="library://ns.adobe.com/flex/spark"
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   width="343" height="237">
+	
+	<fx:Script>
+		<![CDATA[
+			//this project using as3crypto dont forget to include it as lib
+			//I think there is no need for comments, code speaks for itself
+			import com.hurlant.crypto.Crypto;
+			import com.hurlant.crypto.symmetric.ICipher;
+			import com.hurlant.crypto.symmetric.IPad;
+			import com.hurlant.crypto.symmetric.IVMode;
+			import com.hurlant.crypto.symmetric.NullPad;
+			import com.hurlant.util.Base64;
+			import com.hurlant.util.Hex;
+			
+			import mx.utils.SHA256;
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				var plainText:String = "Hello, World!";
+				log(plainText);
+				var pass:String = "aaa";
+				//var iv:String = "000102030405060708090a0b0c0d0e0f";
+				var iv:String = randomIV();
+				log("iv: "+iv);
+				var encText:String = encrypt(pass,iv,plainText);
+				var decryptedText:String = decrypt(pass,iv,encText);
+				log("Encrypted: "+encText," Decrypted: "+decryptedText);
+			}
+			private function encrypt(password:String,ivAsHex:String,plainText:String):String
+			{
+				var key:String = passToKeyString(password);
+				var kdata:ByteArray = Hex.toArray(key);
+				var data:ByteArray = Hex.toArray(Hex.fromString(plainText));
+				log("Text as hex:",Hex.fromString(plainText));
+				var name:String = "aes-cbc";
+				
+				var pad:IPad = new NullPad();
+				var mode:ICipher = Crypto.getCipher(name, kdata, pad);
+				var ivmode:IVMode = mode as IVMode;
+				ivmode.IV = Hex.toArray(ivAsHex);
+				mode.encrypt(data);
+				return Hex.fromArray(data);
+			}
+			private function decrypt(password:String,ivAsHex:String,encDataAsHex:String):String
+			{
+				var key:String = passToKeyString(password);
+				var kdata:ByteArray = Hex.toArray(key);
+				var data:ByteArray = Hex.toArray(encDataAsHex);
+				var name:String = "aes-cbc";
+				var pad:IPad = new NullPad();
+				var mode:ICipher = Crypto.getCipher(name, kdata, pad);
+				var ivmode:IVMode = mode as IVMode;
+				ivmode.IV = Hex.toArray(ivAsHex);
+				mode.decrypt(data);
+				return data.toString();
+			}
+			private function passToKeyString(pass:String):String
+			{
+				var ba:ByteArray = new ByteArray();
+				ba.writeUTFBytes(pass);
+				return SHA256.computeDigest(ba);
+			}
+			private function randomIV():String
+			{
+				var ba:ByteArray = new ByteArray();
+				ba.length = 16;
+				ba.position = 0;
+				while(ba.bytesAvailable>0)
+				{
+					ba.writeByte(int(Math.random()*255));
+				}
+				return Hex.fromArray(ba);
+			}
+			private function log(... args):void
+			{
+				for (var i:int = 0; i < args.length; i++) 
+				{
+					logTB.text += args[i]+" ";
+				}
+				
+				logTB.text += "\n";
+			}
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<s:Button left="0" right="0" bottom="0" label="Run" click="button1_clickHandler(event)"/>
+	<s:TextArea id="logTB" left="0" right="0" top="0" bottom="30"/>
+</s:WindowedApplication>

@@ -1,0 +1,70 @@
+﻿<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+</head>
+<body>
+<span style="font-family: courier">
+<script src="http://crypto-js.googlecode.com/svn/tags/3.1/build/rollups/aes.js"></script>
+<script src="http://crypto-js.googlecode.com/svn/tags/3.1/build/components/pad-zeropadding.js"></script>
+<script src="http://crypto-js.googlecode.com/svn/tags/3.1/build/components/sha256.js"></script>
+<script>
+    main();
+    function main()
+    {
+        var password = "aaa";
+        var plainText = "Hello, World!";
+        //var ivAsHexStr = "000102030405060708090a0b0c0d0e0f";
+		//iv - initial vector, 128 bit value.
+        var ivAsHexStr = CryptoJS.lib.WordArray.random(16).toString();//if random values needed
+        log("ivAsHexStr: " + ivAsHexStr);
+
+        var encTextAsHex = encrypt(password,ivAsHexStr,plainText);
+        log("encTextAsHex: " + encTextAsHex);
+        var decText = decrypt(password,ivAsHexStr,encTextAsHex);
+        log("decText: "+decText);
+    }
+    function encrypt(passwordAsText,ivAsHex,plainText)
+    {
+		// For ciphering we should use key, not a password, you can pass any string as key, 
+		// but CryptoJS will transform it into key, so for better control we will do it.
+		// CryptoJS using as returning result his internal type, so we should use
+		// CryptoJS.enc.Hex.stringify to make a string of it.
+        var keyAsHex = CryptoJS.enc.Hex.stringify(CryptoJS.SHA256(passwordAsText));
+        log("opa: "+CryptoJS.enc.Hex.stringify(CryptoJS.SHA256(passwordAsText)));
+        log("keyAsHexStr: " + keyAsHex);
+        log("plainText: " + plainText);
+		// kdata - key as WordArray type
+        var kdata = CryptoJS.enc.Hex.parse(keyAsHex);
+		// plainText - is just an UTF8 string, and we should convert it to WordArray
+        var data = CryptoJS.enc.Utf8.parse(plainText);
+        log("Text as hex: " + data.toString(CryptoJS.enc.Hex));
+        var iv = CryptoJS.enc.Hex.parse(ivAsHex);
+		// encrypting itself, note that CryptoJS also has NoPadding and its working only for decryption as ZeroPadding, 
+		// but for encryption it doesnt work at all, so use instead ZeroPadding
+        var en = CryptoJS.AES.encrypt(data, kdata, { padding: CryptoJS.pad.ZeroPadding, iv: iv , mode : CryptoJS.mode.CBC});
+		// making String from encrypted object for transferring, note that besides cipher text you should send 
+		// to another side(server/client) initial vector too.
+        var encTextAsHex = en.ciphertext.toString(CryptoJS.enc.Hex);
+        return encTextAsHex;
+    }
+    function decrypt(passwordAsText,ivAsHex,encDataAsHex)
+    {
+        var keyAsHex = CryptoJS.enc.Hex.stringify(CryptoJS.SHA256(passwordAsText));
+        var kdata = CryptoJS.enc.Hex.parse(keyAsHex);
+        var data = CryptoJS.enc.Hex.parse(encDataAsHex);
+        var iv = CryptoJS.enc.Hex.parse(ivAsHex);
+        var encrypted = {};
+        encrypted.key = kdata;
+        encrypted.iv = iv;
+        encrypted.ciphertext = data;
+        var dec = CryptoJS.AES.decrypt(encrypted, kdata, { padding: CryptoJS.pad.ZeroPadding, iv: iv, mode : CryptoJS.mode.CBC });
+        //log(dec.toString(CryptoJS.enc.Hex));
+        return dec.toString(CryptoJS.enc.Utf8);
+    }
+    function log(text)
+    {
+        document.writeln(text+"<br />");
+    }
+</script>
+</span>
+</body>
+</html>
